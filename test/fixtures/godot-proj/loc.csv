@@ -1,0 +1,6 @@
+keys,en,es
+MENU_START,Start,Comenzar
+SCORE_FMT,Score: %d,Puntos: %s
+TIP_BOLD,[b]Careful[/b],[b]Cuidado
+EMPTY_ES,Hello there,
+ORPHAN_KEY,Unused,SinUso

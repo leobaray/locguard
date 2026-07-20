@@ -1,0 +1,7 @@
+config_version=5
+
+[application]
+config/name="LocGuardFixture"
+
+[internationalization]
+locale/translations=PackedStringArray("res://loc.en.translation", "res://loc.es.translation")

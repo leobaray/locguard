@@ -1,0 +1,6 @@
+[gd_scene format=3]
+[node name="Root" type="Control"]
+[node name="Play" type="Button" parent="."]
+text = "PLAY_LABEL"
+[node name="Diff" type="OptionButton" parent="."]
+items = ["OPT_EASY", null, false, 0, "OPT_HARD", null, false, 1]

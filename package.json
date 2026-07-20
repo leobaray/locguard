@@ -1,0 +1,13 @@
+{
+  "name": "locguard",
+  "version": "0.1.0",
+  "description": "Godot 4 localization QA linter — catch untranslated strings, placeholder drift and broken BBCode before your players do. CLI + CI gate.",
+  "bin": { "locguard": "src/cli.js" },
+  "scripts": {
+    "test": "node test/core.test.js",
+    "verify": "bash test/verify.sh"
+  },
+  "keywords": ["godot", "godot4", "localization", "i18n", "l10n", "linter", "ci", "gamedev", "translation", "gettext"],
+  "license": "MIT",
+  "files": ["src/", "README.md", "LICENSE"]
+}
