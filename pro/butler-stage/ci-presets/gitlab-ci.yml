@@ -1,0 +1,5 @@
+# LocGuard CI gate — GitLab CI. Merge into your .gitlab-ci.yml
+locguard:
+  image: node:20
+  script:
+    - node locguard/src/cli.js . --source en --strict

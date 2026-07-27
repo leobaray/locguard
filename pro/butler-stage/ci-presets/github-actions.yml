@@ -1,0 +1,13 @@
+# LocGuard CI gate — GitHub Actions
+# Fails the build when localization errors exist. Copy to .github/workflows/
+name: locguard
+on: [push, pull_request]
+jobs:
+  locguard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Run LocGuard
+        run: node locguard/src/cli.js . --source en --strict

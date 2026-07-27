@@ -5,3 +5,7 @@ config/name="LocGuardFixture"
 
 [internationalization]
 locale/translations=PackedStringArray("res://loc.en.translation", "res://loc.es.translation")
+
+[editor_plugins]
+
+enabled=PackedStringArray("res://addons/locguard/plugin.cfg")

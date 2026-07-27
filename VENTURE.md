@@ -59,3 +59,14 @@ itch.io/tools/tag-localization.
   Godot 4.7 real** de que os 4 tipos de defeito quebram em runtime. Aprendizado do
   motor: tradução vazia mostra o texto de origem (não fica em branco) — mensagem
   do linter corrigida pra refletir a verdade.
+- **2026-07-27 (RUN CEO — PUBLICADO):** círculo completo em uma run. (1) CLI
+  grátis no ar: github.com/leobaray/locguard (MIT, topics). (2) **Pro construído
+  de verdade**: dock GDScript no editor (scan, lista de findings, duplo-clique
+  abre o arquivo) — port das regras com **teste de paridade automatizado vs o
+  CLI** (PARITY ALL PASS no Godot 4.7 headless) + carga limpa no editor. (3)
+  Pacote Pro: addon + CLI + presets de CI (GH Actions/GitLab/pre-commit) +
+  licença comercial, 37KB. (4) **Página paga no ar**:
+  blobsmith.itch.io/locguard — $12, sale de lançamento −25% ($9) até 10/08
+  (itch.io/s/196795), capa estilo terminal com output real, disclosure IA
+  Yes→Code, Buy Now verificado anônimo. Relógio dos kill criteria: COMEÇOU.
+  Próximo: addon "LocGuard Lite" grátis p/ Asset Library como funil in-editor.

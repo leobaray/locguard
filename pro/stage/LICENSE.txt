@@ -1,0 +1,17 @@
+LocGuard Pro — License (v1.0)
+
+Copyright (c) 2026 Blobsmith Studio
+
+WHAT YOU MAY DO
+- Use LocGuard Pro (the editor addon, CI presets and bundled CLI) on any number
+  of your own machines and projects, personal or commercial, unlimited.
+- Keep it forever; updates through the store page are free.
+
+WHAT YOU MAY NOT DO
+- Redistribute, resell, sublicense or publicly host LocGuard Pro or modified
+  copies of it. (The LocGuard CLI is separately available under MIT at
+  github.com/leobaray/locguard.)
+
+NO WARRANTY: the software is provided "as is", without warranty of any kind.
+
+Support: comments on the itch.io page.

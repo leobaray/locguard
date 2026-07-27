@@ -65,10 +65,9 @@ demonstrated in the real engine, it doesn't ship.
 ## Free vs Pro
 
 This CLI is **free and MIT-licensed** — the complete linter. **LocGuard Pro**
-($12, launch sale $9) adds the in-editor Godot dock (scan without leaving the
-editor, double-click a finding to open the file), ready-made CI presets and a
-commercial license — and funds development.
-**→ https://blobsmith.itch.io/locguard**
+($12) adds an in-editor Godot dock (lint without leaving the editor, click a
+finding to jump to the line), ready-made CI presets, per-locale overflow budgets,
+Godot 4.6 plural-CSV support, and report export. → (store link)
 
 ## License
 MIT (CLI). See LICENSE.

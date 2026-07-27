@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><style>
+  * { margin:0; box-sizing:border-box; }
+  body { width:1260px; height:1000px; overflow:hidden;
+    background: radial-gradient(1000px 700px at 25% 15%, #1c2030, #0c0e14 70%);
+    color:#e8e8f0; font-family: system-ui, sans-serif;
+    display:flex; flex-direction:column; align-items:center; justify-content:center; gap:30px; }
+  .title { font-size:92px; font-weight:800; letter-spacing:-1px; }
+  .title span { color:#7aa2ff; }
+  .tag { font-size:32px; color:#b9b9d0; text-align:center; }
+  .tag b { color:#a7f070; }
+  .term { width:1080px; background:#0d1117; border:1px solid #2c2c3a; border-radius:14px;
+    font-family:'DejaVu Sans Mono', monospace; font-size:22px; line-height:1.62; padding:26px 30px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.5); }
+  .term .bar { display:flex; gap:8px; margin-bottom:16px; }
+  .term .dot { width:14px; height:14px; border-radius:50%; }
+  .p { color:#8b949e; } .err { color:#ff7b72; } .warn { color:#e3b341; } .okc { color:#7ee787; }
+  .chip { position:absolute; bottom:38px; right:46px; background:#7aa2ff; color:#10131f;
+    font-weight:700; font-size:25px; padding:10px 20px; border-radius:12px; }
+  .sub { position:absolute; bottom:38px; left:46px; color:#9a9ab0; font-size:24px; }
+  .sub b { color:#e8e8f0; }
+</style></head>
+<body>
+  <div class="title">Loc<span>Guard</span></div>
+  <div class="tag">Catch <b>untranslated strings</b> before your players do.</div>
+  <div class="term">
+    <div class="bar"><div class="dot" style="background:#ff5f57"></div><div class="dot" style="background:#febc2e"></div><div class="dot" style="background:#28c840"></div></div>
+    <div><span class="p">$</span> locguard my-game/ --source en --strict</div>
+    <div><span class="err">✖ [missing-key]</span> "QUEST_DONE" used in ui/hud.gd:42 — not in translations.csv</div>
+    <div><span class="err">✖ [placeholder-printf]</span> es "SCORE_FMT": source [%d] vs [%s]</div>
+    <div><span class="err">✖ [bbcode-imbalance]</span> de "TIP_BOLD": unclosed [b]</div>
+    <div><span class="warn">▲ [empty-translation]</span> fr "MENU_QUIT" — players see English</div>
+    <div><span class="warn">▲ [orphan-key]</span> "OLD_PROMO" is never used</div>
+    <div>&nbsp;</div>
+    <div><span class="p">3 errors, 2 warnings · 214 keys used · exit 1 → CI blocks the ship</span></div>
+  </div>
+  <div class="sub">In-editor dock + CLI + CI gate · <b>Godot 4</b> · verified against the real engine</div>
+  <div class="chip">Ship translated. Always.</div>
+</body></html>
