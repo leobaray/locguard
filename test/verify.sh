@@ -140,7 +140,11 @@ else
   export BUTLER_API_KEY=$(tr -d '\n\r ' < "$KEYFILE")
   out=$("$BUTLER" push-preview pro/butler-stage blobsmith/locguard:win-linux-osx 2>&1) || {
     echo "$out"; echo "FAIL: could not compare against itch.io"; exit 1; }
-  if echo "$out" | grep -qE "0 new, 0 modified, 0 deleted"; then
+  # anchored on the colon of butler's summary line on purpose: an unanchored
+  # "0 new, 0 modified, 0 deleted" is a SUBSTRING of "10 new, 0 modified, 0
+  # deleted", so pushing ten stray files would have read as green (proved by
+  # seeded regression on 29/07).
+  if echo "$out" | grep -qE ": 0 new, 0 modified, 0 deleted"; then
     echo "PASS: the store serves exactly pro/butler-stage"
   else
     echo "$out" | grep -E "^(MODIFIED|ADDED|DELETED|✓)" || true
