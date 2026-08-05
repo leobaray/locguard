@@ -38,6 +38,17 @@ Extraction covers what Godot's POT generator misses: `tr()`/`tr_n()`/`atr()` in
 GDScript, `Tr()`/`Translate()` in C#, and text/tooltip/title properties **plus
 `OptionButton`/`ItemList` items** in `.tscn`/`.tres`.
 
+## Reference
+
+**[Godot 4 shows the raw key instead of the translation — the complete checklist](docs/missing-translations-checklist.md)**
+— every cause we could reproduce (tables never registered, byte-exact key
+matching, the CSV `\n` asymmetry between keys and values, `auto_translate_mode`
+inheritance, fallback-locale masking), each with a one-line test, a fix, and
+whether a linter can see it at all. Every claim is asserted by
+`docs/verify_translation_behavior.sh <godot-binary>`, which builds a throwaway
+project, imports a booby-trapped CSV with the real engine and checks 32 claims
+against it — twice.
+
 ## Install & use
 
 ```
