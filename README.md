@@ -49,6 +49,16 @@ whether a linter can see it at all. Every claim is asserted by
 project, imports a booby-trapped CSV with the real engine and checks 32 claims
 against it — twice.
 
+The same checklist is a page, and the linter runs inside it:
+**<https://blobsmith.lbwma.com/godot-translation-not-working/>**. Paste your
+translation CSV and it reports the defects a table alone can prove — a key with
+padding that will never match, the `\n` that is an escape in a value and two
+literal characters in a key, a duplicate row the import drops silently, an empty
+cell your fallback locale is covering for, placeholder drift between locales,
+unbalanced BBCode. It runs `src/core.js` from this repo, unmodified: the page's
+copy is compared byte-for-byte with this file before its tests are allowed to
+run. Nothing is uploaded — the check happens in your browser.
+
 ## Install & use
 
 ```

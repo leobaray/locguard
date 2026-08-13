@@ -9,6 +9,15 @@ This page lists every cause we could reproduce, each with the symptom, a
 one-line test you can paste, and the fix. It also says which ones a linter can
 catch and which ones it structurally cannot.
 
+**Rather paste your CSV than read?**
+<https://blobsmith.lbwma.com/godot-translation-not-working/> is this checklist
+with the linter running in the page: drop your translation table in and it
+flags the causes a table alone proves (`R2`/`C2b` padded keys, the `C4a-c` `\n`
+asymmetry, duplicate rows, `R5` fallback masking, placeholder drift, unbalanced
+BBCode) and tells you which of the causes below it cannot see from a CSV. It
+runs `src/core.js` from this repo, unmodified, in your browser — nothing is
+uploaded.
+
 **Everything here is measured, not remembered.** Each claim carries an id like
 `R2` or `C4a` that maps to an assertion in
 [`verify_translation_behavior.gd`](verify_translation_behavior.gd), run against
