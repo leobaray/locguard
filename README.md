@@ -59,6 +59,28 @@ unbalanced BBCode. It runs `src/core.js` from this repo, unmodified: the page's
 copy is compared byte-for-byte with this file before its tests are allowed to
 run. Nothing is uploaded — the check happens in your browser.
 
+**[The player changes language and half the UI doesn't — what actually
+froze](docs/locale-switch-does-not-update-ui.md)** — the other half of the
+problem: not a raw key on screen, but a string stuck in the language it was
+built in. One cause (`label.text = tr("KEY")` stores the value where Godot
+expects the key), plus what happens next — the frozen string is re-translated on
+the following switch and, if it collides with a key, becomes a third string
+nobody wrote. 13 claims, each asserted by
+`docs/verify_locale_switch.sh <godot-binary>` against the real engine, twice
+(default fallback locale and cleared). Ships with
+`docs/find_frozen_translations.js`, a dependency-free scanner you point at your
+own project:
+
+```
+node docs/find_frozen_translations.js /path/to/your/godot/project
+▲ [frozen-translation] ui/hud.gd:6 — label.text holds a translated value: frozen at
+  the locale that was active when this ran (S3) …
+```
+
+This one is **not** a LocGuard rule and deliberately so: the defect is invisible
+in the translation table, so it ships as a source scanner instead of a rule that
+would answer from the wrong evidence.
+
 ## Install & use
 
 ```

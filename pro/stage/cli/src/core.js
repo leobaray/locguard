@@ -45,15 +45,24 @@ function extractFromCSharp(text, file) {
 // Scene/resource files (.tscn/.tres) store translatable UI text as string
 // properties. Godot's own POT generator misses many of these (issues #73565,
 // #95160, #85848). We surface the high-signal ones: text=, title=, tooltip_text=,
-// placeholder_text=, hint_tooltip=, and PackedStringArray items on OptionButton /
-// ItemList / TabBar (popup/items).
+// placeholder_text=, hint_tooltip=, and the per-item sub-properties of
+// OptionButton / MenuButton (popup/item_N/text), ItemList (item_N/text) and
+// TabBar (tab_N/title), plus the legacy Godot 3 `items = [...]` array.
+//
+// The ItemList and TabBar forms were added 13/08 after docs/verify_pot_generation.js
+// measured them: this comment and the README already claimed both, and neither
+// `item_0/text` nor `tab_0/title` had ever matched — only the legacy array and
+// the popup form did. A TabBar tab title is a label the player reads, and before
+// this fix it was invisible to Godot's POT generator AND to this linter.
 const TSCN_TEXT_PROPS = ['text', 'title', 'tooltip_text', 'placeholder_text', 'hint_tooltip', 'window_title'];
 function extractFromScene(text, file) {
   const out = [];
   const lines = text.split('\n');
   const propRe = new RegExp('^\\s*(' + TSCN_TEXT_PROPS.join('|') + ')\\s*=\\s*"((?:\\\\.|[^"])*)"');
-  // OptionButton / ItemList items: `items = ["A", null, false, ...]` or popup/items
-  const itemsRe = /^\s*(?:items|popup\/item_\d+\/text)\s*=\s*(.+)$/;
+  // OptionButton / ItemList items: `items = ["A", null, false, ...]` (Godot 3) or
+  // the Godot 4 per-item keys. `popup/item_N/text` is listed before `item_N/text`
+  // so the popup form is never matched by the bare one.
+  const itemsRe = /^\s*(?:items|popup\/item_\d+\/text|item_\d+\/text|tab_\d+\/title)\s*=\s*(.+)$/;
   lines.forEach((line, i) => {
     const pm = propRe.exec(line);
     if (pm && pm[2].trim() !== '') {

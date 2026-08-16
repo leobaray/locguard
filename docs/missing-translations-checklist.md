@@ -225,6 +225,13 @@ resolves `text` and `tooltip_text` (`R13b`) and `OptionButton` item text
 (`R13c`). Consequence: **reading `label.text` back tells you nothing** about
 whether the player sees a translation. Test with `atr()`, not with `text`.
 
+Because the translation happens on the way out, it happens *again* every time
+the locale changes — which is why a node that was handed an already-translated
+string (`label.text = tr("MENU_START")`) stops following the language and can
+even be re-translated into a third string. That is a different symptom from
+this page's raw keys, and it has its own:
+**[the player changes language and half the UI doesn't](locale-switch-does-not-update-ui.md)**.
+
 ---
 
 ## D — why your own testing missed it
