@@ -77,6 +77,14 @@ node docs/find_frozen_translations.js /path/to/your/godot/project
   the locale that was active when this ran (S3) …
 ```
 
+That checklist is also a page, with the scanner running inside it:
+**<https://blobsmith.lbwma.com/godot-locale-not-updating/>**. Paste a `.gd` or
+`.cs` and it reports each frozen assignment with the line and the claim id — no
+clone, no Node, nothing uploaded. The matching lives in
+[`docs/frozen-scan-core.js`](docs/frozen-scan-core.js), which the CLI requires
+and the page serves; the two are compared byte-for-byte before the page's tests
+are allowed to run.
+
 This one is **not** a LocGuard rule and deliberately so: the defect is invisible
 in the translation table, so it ships as a source scanner instead of a rule that
 would answer from the wrong evidence.
