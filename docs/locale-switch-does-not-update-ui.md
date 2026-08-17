@@ -278,6 +278,16 @@ placeholder drift — a perfectly clean table, and the string still freezes. It 
 a property of the *source*, which is why it ships as the separate scanner above
 rather than as a rule that would answer from the wrong evidence.
 
+So if you run the linter and it says your project is clean, that verdict is
+about your table and does not contradict this page. The two tools answer
+different questions, and the scanner above is the one that answers this one.
+
+[LocGuard](../README.md) is the free MIT CLI for the table half: it exits
+non-zero on missing keys, empty translations, placeholder drift and unbalanced
+BBCode, so those land in CI instead of in a review. [LocGuard
+Pro](https://blobsmith.itch.io/locguard) adds the in-editor dock and ready-made
+CI presets. Neither one carries the frozen-translation check on this page today.
+
 ---
 
 *Measured on Godot 4.7.stable.official.5b4e0cb0f, 2026-08-15. Re-run the claims
