@@ -89,6 +89,35 @@ This one is **not** a LocGuard rule and deliberately so: the defect is invisible
 in the translation table, so it ships as a source scanner instead of a rule that
 would answer from the wrong evidence.
 
+**[What Godot 4's `Generate POT` picks up — and the strings it silently leaves
+out](docs/pot-generation-what-it-misses.md)** — the failure one step earlier:
+the string never reaches the translator, because the template it was supposed to
+be in was written without it and the button still reported success. The four
+ways a whole file disappears (`.tres` and every non-`.gd`/`.tscn` file, a folder,
+a deleted file, a scene nobody listed), `auto_translate_mode` removing an entire
+subtree, the expressions the parser cannot follow, and the one that costs most —
+`TranslationServer.translate("KEY")` is never extracted, so a localization
+singleton means an empty template. 61 claims, and they are measured rather than
+quoted: `Generate POT` has no CLI
+([godot-proposals#10986](https://github.com/godotengine/godot-proposals/issues/10986)),
+so `docs/verify_pot_generation.js` boots the editor headless with a throwaway
+`EditorPlugin`, **presses the button**, and asserts against the bytes that land
+on disk. `--selftest` seeds two wrong expectations and requires the run to go
+red.
+
+```
+node docs/verify_pot_generation.js /path/to/Godot_v4.7-stable_linux.x86_64
+# 61/61 claims
+```
+
+That catalogue is a page too, and it answers the question about *your* project:
+**<https://blobsmith.lbwma.com/godot-generate-pot-missing-strings/>**. Paste the
+`.pot` Godot generated and one scene or script, and it names the strings your
+file uses that your template does not contain — plus the constructs neither tool
+can see, so a clean result is never read as a complete template. It runs
+`src/core.js` from this repo, unmodified, compared byte-for-byte before the
+page's tests may run.
+
 ## Install & use
 
 ```

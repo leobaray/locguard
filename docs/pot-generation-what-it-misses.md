@@ -217,9 +217,19 @@ It exits non-zero if any claim stops holding — which is how it is meant to be
 used against a newer Godot: if 4.8 fixes `.tres` or breaks constant resolution,
 the script names the claim that moved.
 
+Or answer it for your own project without cloning anything: this catalogue is
+also a page with the extractor running inside it —
+**<https://blobsmith.lbwma.com/godot-generate-pot-missing-strings/>**. Paste the
+`.pot` Godot generated and one scene or script, and it lists the strings that
+file uses which the template does not contain, plus the constructs above that
+neither tool can see. It runs `src/core.js` from this repo, byte for byte;
+nothing is uploaded.
+
 Related: **[Godot 4 shows the raw key instead of the translation — the complete
 checklist](missing-translations-checklist.md)**, for when the string *is* in
-your table and still comes out raw.
+your table and still comes out raw, and **[the player changes language and half
+the UI doesn't](locale-switch-does-not-update-ui.md)**, for when it was
+translated once and froze there.
 
 ---
 
