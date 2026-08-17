@@ -118,6 +118,34 @@ can see, so a clean result is never read as a complete template. It runs
 `src/core.js` from this repo, unmodified, compared byte-for-byte before the
 page's tests may run.
 
+**[It translates in the editor and ships in English — what the export does to
+your translations](docs/translations-missing-in-exported-build.md)** — the
+failure one step *later*: the tables are correct, the game is correct, and the
+build hands the player one language anyway. Three causes, none of which raises
+an error: a preset set to *export selected resources* never selects a
+`.translation` (nothing depends on it — it is referenced by a setting, not by a
+scene), an exclude filter written to keep source files out sweeps the compiled
+tables with them, and a stale path in `locale/translations` makes that locale
+serve the fallback language instead of the key, so no one ever files a bug. It
+also kills three pieces of standard advice: CI does **not** need a separate
+import pass (the export imports the project itself, after printing
+`Cannot open file` errors for the very files it is about to build), the `.csv`
+is not in a working build and never was, and `include_filter="*.csv"` cannot
+ship it because an imported CSV is a resource. 26 claims, measured by exporting
+a `.pck` without export templates and running it:
+
+```
+docs/verify_export_translations.sh /path/to/Godot_v4.7-stable_linux.x86_64
+# RESULT: 26 passed, 0 failed
+```
+
+None of those three causes lives in the translation table, so LocGuard cannot
+see them and says so. What can be read without running the game is the pair of
+config files, and that is a page:
+**<https://blobsmith.lbwma.com/godot-translations-missing-in-export/>** — paste
+`export_presets.cfg` and `project.godot`, get the cause named per translation
+path, in the browser.
+
 ## Install & use
 
 ```
