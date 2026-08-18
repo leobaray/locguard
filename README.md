@@ -146,6 +146,40 @@ config files, and that is a page:
 `export_presets.cfg` and `project.godot`, get the cause named per translation
 path, in the browser.
 
+**[Godot 4 draws your translation with a font it borrowed from the player's
+PC](docs/font-glyphs-missing-in-translations.md)** — the failure that is not in
+the table at all. `tr()` returns the correct string, the locale is right, the
+key matches, and two players report a row of little boxes. The engine's built-in
+font is a subset of Open Sans: asking it `has_char()` across the BMP, the emoji
+planes and CJK Ext-B gives **1010 codepoints in 92 ranges**, and everything
+outside that is drawn with a font Godot borrows from the machine it happens to
+be running on — an absolute OS path, never packaged. It is also not a
+"non-Latin" problem: `—`, `…`, `“ ”` and `€` are in the font, while `→`, `✓`,
+`★` are not, so an all-English UI ships hex boxes too. 35 claims, including the
+marker to look for (an undrawable codepoint is *not* glyph index 0 — the index
+is the codepoint and the `font_rid` is invalid):
+
+```
+docs/verify_font_glyphs.sh /path/to/Godot_v4.7-stable_linux.x86_64 [dump.json]
+# RESULT: 35 passed, 0 failed
+```
+
+The second argument re-dumps the coverage ranges, which is where
+`docs/glyph-scan-core.js` gets its table — a Godot upgrade is a re-run and a
+diff, not a rewrite. Point the scanner at your project to see what you actually
+ship:
+
+```
+node docs/scan_translation_glyphs.js /path/to/your/godot/project
+node docs/scan_translation_glyphs.js translations.csv --json   # exit 1 on findings
+```
+
+Zero dependencies, reads only `.csv`, writes nothing, and — like the frozen
+scanner — it is **not** a LocGuard rule: every rule here is fixed by editing the
+table, and this one is fixed with a font file. For people without a terminal the
+same bytes run in the browser:
+**<https://blobsmith.lbwma.com/godot-missing-characters-in-translation/>**
+
 ## Install & use
 
 ```
