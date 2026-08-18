@@ -134,6 +134,56 @@ const readSummary = (page) => page.$$eval('#summary tr[data-locale]', (trs) => t
   ok((await readRows(page)).length === 0, 'a clean table draws no rows');
   ok(!(await page.$eval('#findings', (el) => el.className)).includes('show'), 'the findings list is hidden for a clean table');
 
+  // -- stage 3b: the project that has no translation table -----------------
+  // The page's own argument is that this is not a translation problem: a game
+  // written entirely in English already ships characters the engine cannot draw.
+  // Such a project has no CSV, so the box has to take a scene or a script and
+  // work out which it got. This drives that path in the browser and re-derives
+  // every row from the Node module.
+  await page.click('#ex3');
+  await page.waitForSelector('#findings.show');
+  const src3 = await page.$eval('#csv', (el) => el.value);
+  const expect3 = SCAN.scanAny(src3, {});
+  ok(expect3.mode === 'source' && expect3.kind === 'scene',
+    'the pasted scene is recognised as a scene, with no filename to go on');
+  const rows3 = await readRows(page);
+  const cps3 = rows3.map((r) => r.cp);
+  ok(cps3.includes(0x2192), 'U+2192 in a Button label is reported from a scene');
+  ok(cps3.includes(0x2713), 'U+2713 in a tooltip is reported from a scene');
+  ok(cps3.includes(0x2605), 'U+2605 in a dropdown item is reported from a scene');
+  ok(cps3.includes(0x2194), 'U+2194 on the third line of a multi-line Label is reported — ' +
+    'the case a line-by-line reader loses');
+  ok(!cps3.includes(0x2014) && !cps3.includes(0x20AC),
+    'the em dash and the euro in the same scene are NOT reported: the rule is not "non-ASCII"');
+  ok(rows3.length === expect3.totalFlagged, 'every character the scanner flagged reached the DOM');
+  for (const r of rows3) {
+    const e = expect3.locales[0].chars.find((c) => c.cp === r.cp);
+    ok(e && r.hex === e.hex && r.glyph === e.char, 'row ' + r.hex + ' matches the module');
+    ok(r.msg.includes('line '), 'row ' + r.hex + ' says which line of the scene it is on');
+    ok(r.advice === e.advice, 'row ' + r.hex + ' carries the scanner advice verbatim');
+  }
+  const sum3 = await readSummary(page);
+  ok(sum3.length === 1 && sum3[0].locale === 'scene strings',
+    'a scene reports as one group named after what was read, not as a locale');
+  ok(sum3[0].cells === expect3.rowsRead, 'the summary counts the strings a player can see');
+
+  // A script goes down the same path, and a scene with nothing drawn in it has
+  // to say so instead of showing a clean bill of health.
+  await page.fill('#csv', 'extends Control\nfunc _ready():\n\t$Label.text = "Saved \u2713"\n');
+  await page.click('#run');
+  await page.waitForSelector('#findings.show');
+  const rowsGd = await readRows(page);
+  ok(SCAN.detectKind('', await page.$eval('#csv', (el) => el.value)) === 'gdscript',
+    'pasted GDScript is recognised as GDScript');
+  ok(rowsGd.length === 1 && rowsGd[0].cp === 0x2713, 'the script assignment is read and reported');
+
+  await page.fill('#csv', '[gd_scene format=3]\n\n[node name="Root" type="Node2D"]\nposition = Vector2(0, 0)\n');
+  await page.click('#run');
+  await page.waitForSelector('#verdict.show');
+  const vNothing = await page.$eval('#verdict', (el) => el.textContent);
+  ok(/nothing here is drawn/.test(vNothing),
+    'a scene with no visible text says so, instead of reporting a pass it did not test');
+
   // -- stage 4: nothing is uploaded ----------------------------------------
   ok(!/fetch\(|XMLHttpRequest|navigator\.sendBeacon/.test(html),
     'the page makes no network call — it claims nothing is uploaded');

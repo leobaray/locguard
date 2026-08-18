@@ -104,6 +104,18 @@ const BLOCKS = [
 ];
 
 function blockOf(cp) {
+  // Two answers that are not "bundle a font", and that only turned up when this
+  // scanner was pointed at real projects instead of translation tables.
+  // A control byte is not a missing glyph, it is a typo in the string
+  // (godot-demo-projects' tileset_edit.tscn ships fourteen U+0010 inside a
+  // Label); and a Private Use codepoint is normal when an icon font is bundled,
+  // which is exactly what 3d_labels_and_texts.tscn does.
+  if (cp <= 0x001F || (cp >= 0x007F && cp <= 0x009F)) {
+    return { name: 'Control character', advice: 'not a glyph at all - a stray control byte in the string; delete it' };
+  }
+  if ((cp >= 0xE000 && cp <= 0xF8FF) || (cp >= 0xF0000 && cp <= 0x10FFFD)) {
+    return { name: 'Private Use Area', advice: 'an icon-font codepoint - fine IF that font is in the export and set on this control, nothing otherwise' };
+  }
   for (const [lo, hi, name, advice] of BLOCKS) {
     if (cp >= lo && cp <= hi) return { name, advice };
   }
@@ -195,8 +207,14 @@ function scan(text, opts) {
 
 function verdict(result) {
   if (result.mode === 'empty') return 'Nothing to read.';
+  const source = result.mode === 'source';
+  if (source && !result.rowsRead) {
+    return 'No text a player can see was found in this ' + (KIND_LABEL[result.kind] || 'file') +
+      '. That is an answer, not a failure: nothing here is drawn.';
+  }
   if (!result.totalFlagged) {
-    return 'Every character in this table is inside the ' + COVERAGE.count +
+    return 'Every character in this ' + (source ? (KIND_LABEL[result.kind] || 'file') : 'table') +
+      ' is inside the ' + COVERAGE.count +
       ' codepoints the built-in font owns. Nothing here depends on the player having a font installed.';
   }
   const risky = result.locales.filter((l) => l.flagged).map((l) => l.locale).join(', ');
@@ -204,7 +222,212 @@ function verdict(result) {
     'They render today because Godot borrows a font from the machine it runs on; that font is not in your export.';
 }
 
-const API = { COVERAGE, isCovered, blockOf, parseCsv, scan, verdict, BLOCKS };
+// --- source files, for the project that has no translation table ---------
+//
+// The finding this scanner exists for is not about translation: the built-in
+// font is missing `->` `<-` `check` `star` `heart` `note` (U+2190-21FF, U+2600-27BF),
+// so a project written entirely in English already depends on the player's
+// machine the day someone types `Continue ->` into a button. Those projects have
+// no CSV to paste. Their strings live in `.tscn`/`.tres` properties and in
+// `.gd`/`.cs` assignments, so we read those directly.
+//
+// The rule is deliberately narrow: only text a player can SEE. A `res://` path,
+// a node path, a signal name, a printed debug line and a comment are all skipped
+// even when they contain the same character, because flagging them would make
+// the report noise and the noise is what stops people acting on it.
+
+// Properties whose value the engine draws. The first six are the set
+// src/core.js already extracts for the linter (test/project-glyph.test.js
+// asserts this list stays a superset of that one, so the two cannot drift);
+// the rest are drawn too but are not translation keys, which is why the linter
+// does not care about them and this scanner does.
+const UI_TEXT_PROPS = [
+  'text', 'title', 'tooltip_text', 'placeholder_text', 'hint_tooltip', 'window_title',
+  'dialog_text', 'bbcode_text', 'ok_button_text', 'cancel_button_text', 'dialog_autowrap_text',
+];
+
+// Per-item properties of the list-shaped controls, in both the Godot 4 form and
+// the legacy Godot 3 `items = [...]` array.
+const UI_ITEM_RE = /^\s*(?:items|popup\/item_\d+\/text|item_\d+\/text|tab_\d+\/title)\s*=\s*(.+)$/;
+
+// Methods that put a string on screen. Same principle: a method that stores or
+// prints is not here, only one that draws.
+const UI_CALLS_GD = ['add_item', 'add_check_item', 'add_radio_check_item', 'add_separator',
+  'set_item_text', 'set_text', 'add_tab', 'set_tab_title', 'set_tooltip_text', 'set_placeholder',
+  'append_text', 'push_text', 'add_text', 'set_title', 'tr', 'atr', 'tr_n'];
+const UI_CALLS_CS = ['AddItem', 'AddCheckItem', 'AddRadioCheckItem', 'AddSeparator',
+  'SetItemText', 'SetText', 'AddTab', 'SetTabTitle', 'AppendText', 'PushText', 'AddText',
+  'SetTitle', 'Tr', 'Translate'];
+
+// A value that is an address, not a sentence.
+function isAddress(v) {
+  return /^(res|user|uid):\/\//.test(v) || /^[A-Za-z0-9_]+(\.[A-Za-z0-9_]+)+$/.test(v);
+}
+
+function pushString(out, value, line, prop) {
+  const v = unescapeSource(value);
+  if (!v.trim() || isAddress(v)) return;
+  out.push({ value: v, line, prop });
+}
+
+function unescapeSource(s) {
+  return s.replace(/\\n/g, '\n').replace(/\\t/g, '\t').replace(/\\"/g, '"')
+    .replace(/\\'/g, "'").replace(/\\u([0-9a-fA-F]{4})/g, (_, h) => String.fromCharCode(parseInt(h, 16)))
+    .replace(/\\\\/g, '\\');
+}
+
+// Every double-quoted literal on a line, with the escapes already resolved.
+function quotedOnLine(rest) {
+  const out = [];
+  const re = /"((?:\\.|[^"])*)"/g;
+  let m;
+  while ((m = re.exec(rest)) !== null) out.push(m[1]);
+  return out;
+}
+
+// Index of the first quote that actually ends the value, skipping escapes.
+function closingQuote(s) {
+  for (let k = 0; k < s.length; k++) {
+    if (s[k] === '\\') { k++; continue; }
+    if (s[k] === '"') return k;
+  }
+  return -1;
+}
+
+// .tscn / .tres — the properties, plus the per-item forms.
+//
+// The value is read across lines on purpose. Godot serialises a multi-line
+// Label as a quoted value with real newline bytes inside it, so the closing
+// quote can be five lines below the property name. A line-by-line regex reads
+// the first line and stops. This is not hypothetical: running this scanner over
+// the 1028 scene/script files of godotengine/godot-demo-projects found exactly
+// one file it had missed, loading/runtime_save_load/runtime_save_load.tscn, and
+// what was hiding on the last line of that string was a U+2194 arrow — the very
+// character class this scanner exists to report.
+function extractSceneStrings(text) {
+  const out = [];
+  const lines = text.split('\n');
+  const startRe = new RegExp('^\\s*(' + UI_TEXT_PROPS.join('|') + ')\\s*=\\s*"');
+  for (let i = 0; i < lines.length; i++) {
+    const sm = startRe.exec(lines[i]);
+    if (sm) {
+      let rest = lines[i].slice(sm[0].length);
+      let acc = '', j = i, closed = false;
+      for (;;) {
+        const end = closingQuote(rest);
+        if (end >= 0) { acc += rest.slice(0, end); closed = true; break; }
+        acc += rest + '\n';
+        if (++j >= lines.length) break;
+        rest = lines[j];
+      }
+      // An unterminated value means the file is truncated or not a scene; drop
+      // it rather than report the rest of the file as one string.
+      if (closed) { pushString(out, acc, i + 1, sm[1]); i = j; }
+      continue;
+    }
+    const im = UI_ITEM_RE.exec(lines[i]);
+    if (im) for (const q of quotedOnLine(im[1])) pushString(out, q, i + 1, 'items');
+  }
+  return out;
+}
+
+// .gd / .cs — assignment to a drawn property, or a call that draws.
+// Comments are dropped whole: a `->` inside `# TODO` is not shipped to anyone.
+function extractScriptStrings(text, lang) {
+  const cs = lang === 'cs';
+  const props = cs
+    ? ['Text', 'Title', 'TooltipText', 'PlaceholderText', 'HintTooltip', 'WindowTitle', 'DialogText', 'BbcodeText', 'OkButtonText', 'CancelButtonText']
+    : UI_TEXT_PROPS;
+  const calls = cs ? UI_CALLS_CS : UI_CALLS_GD;
+  const assignRe = new RegExp('(?:^|[^A-Za-z0-9_.])(?:[A-Za-z0-9_\\]\\[().]*\\.)?(' + props.join('|') + ')\\s*\\+?=\\s*(.*)$');
+  // A method is normally reached through a node (`$Menu.add_item(...)`), so a
+  // dot may precede the name; what must NOT precede it is another identifier
+  // character, or `reset_text(` would read as `set_text(`.
+  const callRe = new RegExp('(?:^|[^A-Za-z0-9_])(' + calls.join('|') + ')\\s*\\(([^\\n]*)$');
+  const out = [];
+  text.split('\n').forEach((line, i) => {
+    const code = cs ? line.replace(/\/\/.*$/, '') : line.replace(/(^|\s)#.*$/, '');
+    if (!code.trim()) return;
+    const am = assignRe.exec(code);
+    if (am) {
+      const q = quotedOnLine(am[2]);
+      if (q.length) { for (const v of q) pushString(out, v, i + 1, am[1]); return; }
+    }
+    let m;
+    const re = new RegExp(callRe.source, 'g');
+    while ((m = re.exec(code)) !== null) {
+      for (const v of quotedOnLine(m[2])) pushString(out, v, i + 1, m[1] + '()');
+    }
+  });
+  return out;
+}
+
+// What kind of file is this? By name when there is one, by shape when the text
+// was pasted into a page and there is no name to go on.
+function detectKind(name, text) {
+  const n = (name || '').toLowerCase();
+  if (/\.(tscn|tres|escn)$/.test(n)) return 'scene';
+  if (/\.gd$/.test(n)) return 'gdscript';
+  if (/\.cs$/.test(n)) return 'csharp';
+  if (/\.csv$/.test(n)) return 'csv';
+  const head = (text || '').slice(0, 4000);
+  if (/^\s*\[gd_(scene|resource)\b/m.test(head) || /^\s*\[node\b/m.test(head)) return 'scene';
+  if (/^\s*(extends|class_name|@tool|@onready)\b/m.test(head) || /^\s*func\s+\w+\s*\(/m.test(head)) return 'gdscript';
+  if (/\busing\s+Godot\b/.test(head) || /\bpublic\s+partial\s+class\b/.test(head)) return 'csharp';
+  return 'csv';
+}
+
+const KIND_LABEL = { scene: 'scene', gdscript: 'GDScript', csharp: 'C#' };
+
+// Same output shape as scan(), so every consumer — the CLI printer, the page
+// renderer, verdict() — works on both without a second code path. A source file
+// has no locale columns, so it reports as a single group named after the kind.
+function scanSource(text, opts) {
+  const o = opts || {};
+  const kind = o.kind || detectKind(o.name, text);
+  const strings = kind === 'scene'
+    ? extractSceneStrings(text)
+    : extractScriptStrings(text, kind === 'csharp' ? 'cs' : 'gd');
+  const out = {
+    mode: 'source', kind, engine: COVERAGE.engine, font: COVERAGE.font,
+    rowsRead: strings.length, locales: [],
+  };
+  const found = new Map();
+  for (const s of strings) {
+    for (const ch of s.value) {
+      const cp = ch.codePointAt(0);
+      if (isIgnorable(cp) || isCovered(cp)) continue;
+      const where = 'line ' + s.line + (s.prop ? ' (' + s.prop + ')' : '');
+      const prev = found.get(cp);
+      if (prev) { prev.count++; if (prev.keys.length < 3 && !prev.keys.includes(where)) prev.keys.push(where); continue; }
+      const b = blockOf(cp);
+      found.set(cp, {
+        cp, char: ch, hex: 'U+' + cp.toString(16).toUpperCase().padStart(4, '0'),
+        block: b.name, advice: b.advice, count: 1, keys: [where],
+        sample: s.value.length > 60 ? s.value.slice(0, 57) + '...' : s.value,
+        line: s.line, prop: s.prop,
+      });
+    }
+  }
+  const chars = [...found.values()].sort((a, b) => b.count - a.count || a.cp - b.cp);
+  out.locales.push({
+    locale: (KIND_LABEL[kind] || kind) + ' strings',
+    cells: strings.length, chars, blocks: [...new Set(chars.map((c) => c.block))], flagged: chars.length,
+  });
+  out.totalFlagged = chars.length;
+  out.strings = strings;
+  return out;
+}
+
+// One entry point for "here is a file, tell me what is wrong with it".
+function scanAny(text, opts) {
+  const o = opts || {};
+  const kind = o.kind || detectKind(o.name, text);
+  return kind === 'csv' ? Object.assign(scan(text, o), { kind: 'csv' }) : scanSource(text, Object.assign({}, o, { kind }));
+}
+
+const API = { COVERAGE, isCovered, blockOf, parseCsv, scan, verdict, BLOCKS,
+  UI_TEXT_PROPS, extractSceneStrings, extractScriptStrings, detectKind, scanSource, scanAny };
 
 // Node (CLI + tests) and the browser (the page) load the same bytes.
 if (typeof module !== 'undefined' && module.exports) module.exports = API;

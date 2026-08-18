@@ -176,8 +176,32 @@ node docs/scan_translation_glyphs.js translations.csv --json   # exit 1 on findi
 
 Zero dependencies, reads only `.csv`, writes nothing, and — like the frozen
 scanner — it is **not** a LocGuard rule: every rule here is fixed by editing the
-table, and this one is fixed with a font file. For people without a terminal the
-same bytes run in the browser:
+table, and this one is fixed with a font file.
+
+**If your project has no translation table at all, it is still in this.** None
+of the 35 claims is about translation, so a game written entirely in English is
+exposed the day someone types `Continue →` into a Button or `Saved ✓` into a
+Label — and that project has no CSV to scan. `docs/scan_project_glyphs.js` reads
+the project itself: `text`, `title`, `tooltip_text`, `placeholder_text` and the
+per-item properties in `.tscn`/`.tres`, plus assignments and `add_item()`-style
+calls in `.gd`/`.cs`.
+
+```
+node docs/scan_project_glyphs.js /path/to/your/godot/project
+node docs/scan_project_glyphs.js scenes/hud.tscn --json   # exit 1 on findings
+node docs/scan_project_glyphs.js /path/to/project --all   # sweep .csv tables too
+```
+
+Deliberately narrow — only text a player can SEE. A `res://` path, a node path,
+a comment and a `print()` are skipped even when they hold the same character.
+What that costs in recall was measured against a project nobody here wrote: over
+the 1028 scene and script files of `godotengine/godot-demo-projects`, 1806
+player-visible strings, it reports five files, and of every uncovered codepoint
+in the silent 1023 exactly one survives an independent byte-level sweep — an
+argument to `OS.get_system_font_path_for_text()`, not a string on screen.
+
+For people without a terminal the same bytes run in the browser, and the page
+takes a scene or a script as readily as a CSV:
 **<https://blobsmith.lbwma.com/godot-missing-characters-in-translation/>**
 
 ## Install & use

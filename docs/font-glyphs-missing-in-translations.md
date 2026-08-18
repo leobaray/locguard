@@ -153,6 +153,77 @@ filesystem in it, so the identical bytes also run in a browser for people
 without a terminal:
 <https://blobsmith.lbwma.com/godot-missing-characters-in-translation/>
 
+### If your project has no translation table at all
+
+The scanner above needs a CSV, and the audience this document is actually about
+often has none. Nothing in claims S1-S4 is about translation: the built-in font
+has no arrows (U+2190-21FF) and no dingbats (U+2600-27BF), so a game written
+entirely in English is already in this the day someone types `Continue →` into a
+Button or `Saved ✓` into a Label.
+
+`docs/scan_project_glyphs.js` reads the project instead of the table — `text`,
+`title`, `tooltip_text`, `placeholder_text` and the per-item properties in
+`.tscn`/`.tres`, and assignments and `add_item()`-style calls in `.gd`/`.cs`.
+
+A Button with `text = "Continue → Next"` and `tooltip_text = "Autosaved ✓"`, and
+nothing else in the project — no CSV, no locale, no `tr()`:
+
+```
+$ node docs/scan_project_glyphs.js /tmp/demoproj
+engine 4.7-stable (official) — built-in font Open Sans SemiBold draws 1010 codepoints
+1 file read, 3 strings a player can see
+
+/tmp/demoproj/ui/hud.tscn  (scene, 3 strings)
+      6:  U+2192  "→"       Arrows ×1  in text
+         "Continue → Next"
+      7:  U+2713  "✓"       Symbols and Dingbats ×1  in tooltip_text
+         "Autosaved ✓"
+  → NOT in the built-in font, even though the text around it is ASCII
+  → NOT in the built-in font: check marks, stars, hearts, music notes
+
+2 character occurrences across 1 file are outside the built-in font. They render
+today because Godot borrows a font from the machine it runs on; that font is not
+in your export.
+```
+
+The third string, `text = "Score: 0"`, is read and stays silent — that is the
+whole report, not an excerpt of it.
+
+Exit 0/1/2 and `--json` like its sibling; `--all` adds `.csv` tables to the same
+sweep. It is deliberately narrow — only text a player can SEE. A `res://` path,
+a node path, a comment and a `print()` are skipped even when they hold the same
+character, because a report with noise in it is a report nobody acts on.
+
+**What that costs in recall, measured.** Both halves of that promise were run
+against a project nobody here wrote: the 1028 scene and script files of
+[godotengine/godot-demo-projects](https://github.com/godotengine/godot-demo-projects)
+at `34fc995`, 1806 player-visible strings. Five files are reported and 1023 are
+not, and every uncovered codepoint in the silent 1023 was checked against the
+raw bytes: exactly one survives, `misc/os_test/os_test.gd`, which passes `你好` to
+`OS.get_system_font_path_for_text()` — an argument to the very API claim S3 is
+about, not a string on screen. Correct silence.
+
+That run also changed the scanner twice, which is the point of running it:
+
+* **the multi-line value.** Godot serialises a multi-line `Label` as a quoted
+  property with real newline bytes inside it, so the closing quote can be five
+  lines below the property name. A line-by-line reader stops at the first line
+  and loses the rest. `loading/runtime_save_load/runtime_save_load.tscn` hides a
+  U+2194 on the last line of one such string — the exact character class this
+  scanner exists to report, invisible to the first version of it.
+* **two answers that are not "bundle a font".** `2d/physics_platformer/tileset_edit.tscn`
+  ships fourteen U+0010 inside a Label: a control byte is not a missing glyph,
+  it is a typo in the string, and the fix is to delete it. And
+  `3d/labels_and_texts/3d_labels_and_texts.tscn` uses U+E800-E80B, Private Use
+  Area — an icon font, which is fine *if* that font is in the export and set on
+  that control, and nothing at all otherwise. Both are now named as what they
+  are instead of being filed under "bundle a font".
+
+`test/project-glyph.test.js` asserts all of this (76 assertions, the last four
+only when `LG_CORPUS` points at the corpus), including that the property list
+here stays a superset of the one `src/core.js` uses, so the linter and the
+scanner cannot drift apart on what counts as text a player reads.
+
 ## What this is not
 
 This is deliberately **not** a LocGuard rule. Every rule in the linter answers
