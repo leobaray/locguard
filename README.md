@@ -204,6 +204,38 @@ For people without a terminal the same bytes run in the browser, and the page
 takes a scene or a script as readily as a CSV:
 **<https://blobsmith.lbwma.com/godot-missing-characters-in-translation/>**
 
+**[Godot 4: every plural shows the same
+string](docs/plural-forms-always-show-the-same-string.md)** — `tr_n()` returns
+one word for 1, 2 and 5, and the importer never complained. The CSV plural
+format on the first page of that search is the syntax of a pull request that was
+**never merged** ([godot#101471](https://github.com/godotengine/godot/pull/101471));
+what shipped, in 4.6 ([godot#112073](https://github.com/godotengine/godot/pull/112073)),
+is a `?plural` column with the key column left **empty** on continuation rows.
+99 assertions across three engines — 4.7, 4.4 and 4.2 — because "old Godot does
+not support it" is not a behaviour: 4.3–4.5 write a bogus
+`t.?plural.translation` and 4.2 puts your untranslated source strings on screen.
+
+```
+node docs/verify_plurals.js /path/to/Godot_v4.7-stable_linux.x86_64
+# RESULT: 63 passed, 0 failed        (18 more on 4.4, 18 on 4.2)
+```
+
+The trap that survives code review is a table that is *right* for every number
+you test with: Russian carrying two forms because English has two is correct at
+n=1, 2, 3 and 22, and shows the untranslated source plural at n=5. So the
+scanner names the smallest `n` that reproduces each finding:
+
+```
+node docs/check_plural_csv.js /path/to/your/godot/project
+node docs/check_plural_csv.js translations.csv --json   # exit 1 on findings
+```
+
+The per-language form counts behind it are derived from the engine by
+`docs/dump_plural_rules.js`, not copied from gettext — 48 locales, re-derived on
+4.7 and matched on all 48. Like the frozen and glyph scanners it is **not** a
+LocGuard rule: a table missing a plural form has no missing key, no empty cell
+and no placeholder drift, so the linter is right to call it clean.
+
 ## Install & use
 
 ```
